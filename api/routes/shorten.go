@@ -27,7 +27,6 @@ type response struct {
 func ShortenURL(context *fiber.Ctx) error {
 
 	//incoming request parsing
-	fmt.Println("testing....")
 	body := new(request)
 	fmt.Println(context)
 	err := context.BodyParser(&body)
@@ -59,7 +58,7 @@ func ShortenURL(context *fiber.Ctx) error {
 
 	//shortening
 	// LOGIC FOR SHORTENING :
-	//check if the user has provided any custom dhort urls
+	//check if the user has provided any custom short urls
 	// if yes, proceed,
 	// else, create a new short using the first 6 digits of uuid
 	// TODO: collision checks
@@ -82,9 +81,16 @@ func ShortenURL(context *fiber.Ctx) error {
 		})
 	}
 	if body.Expiry == 0 {
-		body.Expiry = 24 // default expiry of 24 hours TODO: logic for expiry
+		body.Expiry = 24
 	}
 
+	//adding to the db
+	err = r.Set(database.Ctx, id, body.URL, body.Expiry*3600*time.Second).Err()
+	if err != nil {
+		return context.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to connect to server",
+		})
+	}
 	resp := response{
 		URL:         body.URL,
 		CustomShort: "",
@@ -93,6 +99,5 @@ func ShortenURL(context *fiber.Ctx) error {
 
 	resp.CustomShort = os.Getenv("DOMAIN") + "/" + id
 	return context.Status(fiber.StatusOK).JSON(resp)
-	//TODO:add to db
 
 }
