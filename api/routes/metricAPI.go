@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	database "github.com/tanyasingh/urlshortener/db"
 )
@@ -19,10 +21,13 @@ func MetricAPI(context *fiber.Ctx) error {
 		})
 	}
 
-	metricData := make(map[string]int)
-	for _, val := range result {
-		str, _ := val.Member.(string)
-		metricData[str] = int(val.Score)
+	metricsData := []string{}
+
+	for _, value := range result {
+		str := value.Member.(string)
+		domainItem := str + ": " + strconv.Itoa(int(value.Score))
+		metricsData = append(metricsData, domainItem)
 	}
-	return context.Status(fiber.StatusOK).JSON(metricData)
+
+	return context.Status(fiber.StatusOK).JSON(metricsData)
 }
