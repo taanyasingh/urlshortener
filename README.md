@@ -17,12 +17,33 @@ __Steps to setup on local__
 - To run the application locally run redis server using above command and the run server with : <br>
        ```
       cd urlshortener/api/
-      ``` <br>
+      ```<br>
       ```
      go run main.go
       ```
+  <br>
+  
+__Docker Images link__
+        <br>
 
-__URL shorten API :__
+  -  Commands to pull images from docker registry<br>
+        ```
+        docker pull taanyasingh1294/url-shortener:v1
+        ```
+        ```
+        docker pull taanyasingh1294/urlshortener-database:v1
+        ```
+  <br>
+  
+__Command to run  build and run image__
+  <br>
+  - Go to the directory where docker-compose.yml file is there and run following command :
+  ```go
+  cd urlshortener/
+  sudo docker compose up
+  ```
+
+__URL shorten API :__<br>
 http://127.0.0.1:3000/api/v1  <br>
 body : <br>
 ```javascript
@@ -33,9 +54,9 @@ body : <br>
 }
 ```
 
-__Redirect API__
+__Redirect API__<br>
 Copy the shorten url and run it in browser, link will get redirected to original url.
 
-__Metric API__
+__Metric API__<br>
 http://127.0.0.1:3000/api/v1/metrics
 
