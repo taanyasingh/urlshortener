@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"log"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -31,4 +33,13 @@ func RemoveDomainError(url string) bool {
 		return false
 	}
 	return true
+}
+
+func GetDomainFromURL(u string) (string, error) {
+	url, err := url.Parse(u)
+	if err != nil {
+		log.Fatal(err)
+	}
+	hostname := strings.TrimPrefix(url.Hostname(), "www.")
+	return hostname, nil
 }

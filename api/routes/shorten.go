@@ -24,44 +24,36 @@ type response struct {
 	Expiry      time.Duration `json:"expiry`
 }
 
+// Function for shortening url
 func ShortenURL(context *fiber.Ctx) error {
 
-	//incoming request parsing
 	body := new(request)
-	fmt.Println(context)
 	err := context.BodyParser(&body)
 	if err != nil {
 		return context.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "cannot parse JSON",
+			"error": "Cannot parse JSON in request",
 		})
 	}
 
-	//Check url
+	//Checking url
 	if !govalidator.IsURL(body.URL) {
 		return context.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid URL",
 		})
 	}
 
-	// check for the domain error
-	// users may abuse the shortener by shorting the domain `localhost:3000` itself
-	// leading to a inifite loop, so don't accept the domain for shortening
+	//check for the domain error
 	if !helpers.RemoveDomainError(body.URL) {
 		return context.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
-			"error": "haha... nice try",
+			"error": "Error in domain",
 		})
 	}
 
-	// enforce https
-	// all url will be converted to https before storing in database
+	//enforce https
+	//all url will be converted to https before storing in database
 	body.URL = helpers.EnforceHTTP(body.URL)
 
-	//shortening
-	// LOGIC FOR SHORTENING :
-	//check if the user has provided any custom short urls
-	// if yes, proceed,
-	// else, create a new short using the first 6 digits of uuid
-	// TODO: collision checks
+	// TODO: check if shorten url exists in db
 
 	var id string
 	if body.CustomShort == "" {
@@ -70,11 +62,10 @@ func ShortenURL(context *fiber.Ctx) error {
 		id = body.CustomShort
 	}
 
-	r := database.CreateClient(0)
-	defer r.Close()
+	redisClient1 := database.CreateClient(0)
+	defer redisClient1.Close()
 
-	val, _ := r.Get(database.Ctx, id).Result()
-
+	val, _ := redisClient1.Get(database.Ctx, id).Result()
 	if val != "" {
 		return context.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "URL short already in use",
@@ -84,8 +75,7 @@ func ShortenURL(context *fiber.Ctx) error {
 		body.Expiry = 24
 	}
 
-	//adding to the db
-	err = r.Set(database.Ctx, id, body.URL, body.Expiry*3600*time.Second).Err()
+	err = redisClient1.Set(database.Ctx, id, body.URL, body.Expiry*3600*time.Second).Err()
 	if err != nil {
 		return context.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Unable to connect to server",
@@ -95,6 +85,21 @@ func ShortenURL(context *fiber.Ctx) error {
 		URL:         body.URL,
 		CustomShort: "",
 		Expiry:      body.Expiry,
+	}
+
+	//get domain name
+	domain, err := helpers.GetDomainFromURL(body.URL)
+
+	redisClient2 := database.CreateClient(1)
+	defer redisClient2.Close()
+
+	//Storing domain data for anlytical purpose
+	_, err = redisClient2.ZIncrBy(database.Ctx, "domains", 1, domain).Result()
+	if err != nil {
+		fmt.Println(".........", err)
+		return context.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Not able to add the set to databse",
+		})
 	}
 
 	resp.CustomShort = os.Getenv("DOMAIN") + "/" + id
